@@ -1,24 +1,26 @@
-//
-//  ContentView.swift
-//  TheHunt
-//
-//  Created by Morgan Grundy on 3/4/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(GameViewModel.self) private var viewModel
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            switch viewModel.gamePhase {
+            case .welcome:
+                WelcomeView()
+            case .lobby:
+                LobbyView()
+            case .active:
+                ActiveHuntView()
+            case .completed:
+                HuntCompleteView()
+            }
         }
-        .padding()
+        .animation(.smooth(duration: 0.5), value: viewModel.gamePhase)
     }
 }
 
 #Preview {
     ContentView()
+        .environment(GameViewModel())
 }

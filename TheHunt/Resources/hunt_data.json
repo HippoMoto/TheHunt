@@ -1,0 +1,78 @@
+{
+  "hunt": {
+    "id": "cambridge-2026-spring",
+    "title": "The Cambridge Hunt",
+    "description": "Race through the heart of Cambridge, from ancient colleges to modern landmarks. 5 locations, each more challenging to find than the last.",
+    "startTime": "2026-03-15T14:00:00Z",
+    "mediumRevealMinutes": 5,
+    "easyRevealMinutes": 10,
+    "maxPointsPerLocation": 100
+  },
+  "locations": [
+    {
+      "id": "loc-kings-chapel",
+      "name": "King's College Chapel",
+      "order": 1,
+      "latitude": 52.2044,
+      "longitude": 0.1165,
+      "arrivalRadiusMeters": 10.0,
+      "clues": {
+        "hard": "A monarch's offering to the divine, where voices have risen in song for over five centuries. Stone fingers reach for the heavens.",
+        "medium": "This perpendicular Gothic masterpiece was founded by Henry VI in 1446. Its fan vault ceiling is the world's largest.",
+        "easy": "King's College Chapel on King's Parade — stand at the front gate facing the Great Lawn."
+      }
+    },
+    {
+      "id": "loc-math-bridge",
+      "name": "Mathematical Bridge",
+      "order": 2,
+      "latitude": 52.2021,
+      "longitude": 0.1152,
+      "arrivalRadiusMeters": 10.0,
+      "clues": {
+        "hard": "Tangents and arcs made timber, this crossing was supposedly assembled without fasteners — or so the legend goes.",
+        "medium": "A wooden footbridge at Queens' College, designed by William Etheridge in 1749, often wrongly attributed to Newton.",
+        "easy": "The Mathematical Bridge at Queens' College — view it from Silver Street Bridge over the River Cam."
+      }
+    },
+    {
+      "id": "loc-round-church",
+      "name": "The Round Church",
+      "order": 3,
+      "latitude": 52.2088,
+      "longitude": 0.1186,
+      "arrivalRadiusMeters": 10.0,
+      "clues": {
+        "hard": "Crusaders carried this shape home from the Holy Sepulchre. Only four of its kind survive in England.",
+        "medium": "The Church of the Holy Sepulchre, dating to 1130, is one of England's few remaining round Norman churches.",
+        "easy": "The Round Church on the corner of Bridge Street and Round Church Street — one of Cambridge's oldest buildings."
+      }
+    },
+    {
+      "id": "loc-eagle-pub",
+      "name": "The Eagle Pub",
+      "order": 4,
+      "latitude": 52.2038,
+      "longitude": 0.1185,
+      "arrivalRadiusMeters": 10.0,
+      "clues": {
+        "hard": "In this establishment, the secret of life was first announced over a pint in February 1953. The ceiling still bears wartime signatures.",
+        "medium": "Watson and Crick announced the discovery of the structure of DNA here. RAF and USAAF airmen left graffiti on the ceiling during WWII.",
+        "easy": "The Eagle Pub on Bene't Street — stand at the main entrance beneath the hanging pub sign."
+      }
+    },
+    {
+      "id": "loc-corpus-clock",
+      "name": "Corpus Christi Clock",
+      "order": 5,
+      "latitude": 52.2035,
+      "longitude": 0.1177,
+      "arrivalRadiusMeters": 10.0,
+      "clues": {
+        "hard": "A gilded insect devours the minutes atop a face of concentric rings. Time is displayed but never accurately — by design.",
+        "medium": "The Chronophage (time-eater), a large grasshopper-like sculpture, sits atop John C. Taylor's gold-plated clock unveiled by Stephen Hawking in 2008.",
+        "easy": "The Corpus Clock on the corner of Bene't Street and Trumpington Street, outside the Taylor Library of Corpus Christi College."
+      }
+    }
+  ]
+}

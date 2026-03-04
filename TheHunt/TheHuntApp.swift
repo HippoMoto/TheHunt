@@ -1,17 +1,13 @@
-//
-//  TheHuntApp.swift
-//  TheHunt
-//
-//  Created by Morgan Grundy on 3/4/26.
-//
-
 import SwiftUI
 
 @main
 struct TheHuntApp: App {
+    @State private var gameViewModel = GameViewModel()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(gameViewModel)
         }
     }
 }
