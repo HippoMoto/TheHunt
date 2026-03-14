@@ -24,6 +24,7 @@ struct HuntLocation: Codable, Identifiable {
     let longitude: Double
     let arrivalRadiusMeters: Double
     let clues: ClueSet
+    let evidenceChallenge: EvidenceChallenge
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -38,4 +39,9 @@ struct ClueSet: Codable {
     let hard: String
     let medium: String
     let easy: String
+}
+
+struct EvidenceChallenge: Codable {
+    let instruction: String
+    let question: String
 }

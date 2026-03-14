@@ -146,17 +146,32 @@ struct ActiveHuntView: View {
 
                 // Bottom toolbar
                 HStack {
+                    #if DEBUG
+                    Button {
+                        viewModel.debugSimulateArrival()
+                    } label: {
+                        Label("Simulate Arrival", systemImage: "location.fill")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.glass)
+                    #endif
+
                     Spacer()
+
                     Button {
                         viewModel.showLeaderboard = true
                     } label: {
                         Label("Leaderboard", systemImage: "trophy.fill")
                     }
                     .buttonStyle(.glass)
-                    Spacer()
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
+            }
+
+            // Evidence challenge overlay
+            if viewModel.showEvidenceChallenge {
+                EvidenceChallengeView()
             }
 
             // Arrival celebration overlay

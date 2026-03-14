@@ -57,7 +57,6 @@ struct HuntCompleteView: View {
                     }
 
                     Button("View Leaderboard") {
-                        viewModel.generateLeaderboard()
                         viewModel.showLeaderboard = true
                     }
                     .buttonStyle(.glassProminent)

@@ -20,6 +20,10 @@
         "hard": "A monarch's offering to the divine, where voices have risen in song for over five centuries. Stone fingers reach for the heavens.",
         "medium": "This perpendicular Gothic masterpiece was founded by Henry VI in 1446. Its fan vault ceiling is the world's largest.",
         "easy": "King's College Chapel on King's Parade — stand at the front gate facing the Great Lawn."
+      },
+      "evidenceChallenge": {
+        "instruction": "Take a photo of the inscription above the main entrance.",
+        "question": "What is the third word of the inscription?"
       }
     },
     {
@@ -33,6 +37,10 @@
         "hard": "Tangents and arcs made timber, this crossing was supposedly assembled without fasteners — or so the legend goes.",
         "medium": "A wooden footbridge at Queens' College, designed by William Etheridge in 1749, often wrongly attributed to Newton.",
         "easy": "The Mathematical Bridge at Queens' College — view it from Silver Street Bridge over the River Cam."
+      },
+      "evidenceChallenge": {
+        "instruction": "Photograph the bridge's information plaque.",
+        "question": "What year was the current bridge built?"
       }
     },
     {
@@ -46,6 +54,10 @@
         "hard": "Crusaders carried this shape home from the Holy Sepulchre. Only four of its kind survive in England.",
         "medium": "The Church of the Holy Sepulchre, dating to 1130, is one of England's few remaining round Norman churches.",
         "easy": "The Round Church on the corner of Bridge Street and Round Church Street — one of Cambridge's oldest buildings."
+      },
+      "evidenceChallenge": {
+        "instruction": "Take a photo of the memorial stone by the entrance.",
+        "question": "What name appears first on the memorial stone?"
       }
     },
     {
@@ -59,6 +71,10 @@
         "hard": "In this establishment, the secret of life was first announced over a pint in February 1953. The ceiling still bears wartime signatures.",
         "medium": "Watson and Crick announced the discovery of the structure of DNA here. RAF and USAAF airmen left graffiti on the ceiling during WWII.",
         "easy": "The Eagle Pub on Bene't Street — stand at the main entrance beneath the hanging pub sign."
+      },
+      "evidenceChallenge": {
+        "instruction": "Photograph the blue DNA plaque outside the pub.",
+        "question": "What is the sixth word on the plaque?"
       }
     },
     {
@@ -72,6 +88,10 @@
         "hard": "A gilded insect devours the minutes atop a face of concentric rings. Time is displayed but never accurately — by design.",
         "medium": "The Chronophage (time-eater), a large grasshopper-like sculpture, sits atop John C. Taylor's gold-plated clock unveiled by Stephen Hawking in 2008.",
         "easy": "The Corpus Clock on the corner of Bene't Street and Trumpington Street, outside the Taylor Library of Corpus Christi College."
+      },
+      "evidenceChallenge": {
+        "instruction": "Take a photo of the dedication plaque beneath the clock.",
+        "question": "Who is credited as the designer?"
       }
     }
   ]

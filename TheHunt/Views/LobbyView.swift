@@ -42,8 +42,11 @@ struct LobbyView: View {
                 // Team card
                 if let team = viewModel.team {
                     VStack(alignment: .leading, spacing: 12) {
-                        Label(team.name, systemImage: "person.3.fill")
-                            .font(.title2.bold())
+                        HStack(spacing: 12) {
+                            TeamAvatarView(avatar: team.avatar, size: 44)
+                            Text(team.name)
+                                .font(.title2.bold())
+                        }
                         ForEach(team.players) { player in
                             HStack(spacing: 8) {
                                 Image(systemName: "person.fill")

@@ -1,6 +1,7 @@
 import Foundation
 
 enum GamePhase: Equatable {
+    case authenticating
     case welcome
     case lobby
     case active
@@ -40,17 +41,19 @@ class Team: Identifiable {
     var players: [Player]
     var completedLocations: [CompletedLocation]
     var currentLocationIndex: Int
+    var avatar: TeamAvatar
 
     var totalScore: Int {
         completedLocations.reduce(0) { $0 + $1.pointsAwarded }
     }
 
-    init(name: String, players: [Player] = []) {
+    init(name: String, players: [Player] = [], avatar: TeamAvatar = .none) {
         self.id = UUID()
         self.name = name
         self.players = players
         self.completedLocations = []
         self.currentLocationIndex = 0
+        self.avatar = avatar
     }
 }
 
@@ -84,16 +87,38 @@ struct CompletedLocation: Identifiable {
 
 struct LeaderboardEntry: Identifiable {
     let id: UUID
+    let teamID: String
     let teamName: String
+    let avatar: TeamAvatar
     let score: Int
     let locationsCompleted: Int
+    let isCurrentTeam: Bool
 
-    init(teamName: String, score: Int, locationsCompleted: Int) {
+    init(teamID: String = "", teamName: String, avatar: TeamAvatar = .none,
+         score: Int, locationsCompleted: Int, isCurrentTeam: Bool = false) {
         self.id = UUID()
+        self.teamID = teamID
         self.teamName = teamName
+        self.avatar = avatar
         self.score = score
         self.locationsCompleted = locationsCompleted
+        self.isCurrentTeam = isCurrentTeam
     }
+}
+
+enum EvidenceStatus: String {
+    case pending
+    case approved
+    case rejected
+}
+
+struct EvidenceSubmission: Identifiable {
+    let id: String
+    let teamID: String
+    let locationID: String
+    let answer: String
+    var status: EvidenceStatus
+    let submittedAt: Date
 }
 
 struct ScoringEngine {

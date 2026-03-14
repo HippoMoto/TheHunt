@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2C3C87D92F5C5C4B0067DD0F /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C87D82F5C5C4B0067DD0F /* FirebaseAuth */; };
+		2CB907A62F5A367000D8B21F /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 2CB907A52F5A367000D8B21F /* FirebaseDatabase */; };
+		2CB907A82F5A367000D8B21F /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 2CB907A72F5A367000D8B21F /* FirebaseStorage */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		2C8808E22F58E22900EBE1D6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +58,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2CB907A62F5A367000D8B21F /* FirebaseDatabase in Frameworks */,
+				2C3C87D92F5C5C4B0067DD0F /* FirebaseAuth in Frameworks */,
+				2CB907A82F5A367000D8B21F /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,12 +81,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2C3C87D72F5C5C4B0067DD0F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		2C8808CB2F58E22800EBE1D6 = {
 			isa = PBXGroup;
 			children = (
 				2C8808D62F58E22800EBE1D6 /* TheHunt */,
 				2C8808E42F58E22900EBE1D6 /* TheHuntTests */,
 				2C8808EE2F58E22900EBE1D6 /* TheHuntUITests */,
+				2C3C87D72F5C5C4B0067DD0F /* Frameworks */,
 				2C8808D52F58E22800EBE1D6 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -112,6 +129,9 @@
 			);
 			name = TheHunt;
 			packageProductDependencies = (
+				2CB907A52F5A367000D8B21F /* FirebaseDatabase */,
+				2CB907A72F5A367000D8B21F /* FirebaseStorage */,
+				2C3C87D82F5C5C4B0067DD0F /* FirebaseAuth */,
 			);
 			productName = TheHunt;
 			productReference = 2C8808D42F58E22800EBE1D6 /* TheHunt.app */;
@@ -195,6 +215,9 @@
 			);
 			mainGroup = 2C8808CB2F58E22800EBE1D6;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2CB907A42F5A367000D8B21F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2C8808D52F58E22800EBE1D6 /* Products */;
 			projectDirPath = "";
@@ -400,7 +423,9 @@
 				DEVELOPMENT_TEAM = 3653V99CEZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "TheHunt needs camera access to capture evidence photos.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TheHunt needs your location to detect when you arrive at scavenger hunt locations.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "TheHunt needs photo library access for team avatars.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -432,8 +457,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3653V99CEZ;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_TESTABILITY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "TheHunt needs camera access to capture evidence photos.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TheHunt needs your location to detect when you arrive at scavenger hunt locations.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "TheHunt needs photo library access for team avatars.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -580,6 +608,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2CB907A42F5A367000D8B21F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2C3C87D82F5C5C4B0067DD0F /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2CB907A42F5A367000D8B21F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		2CB907A52F5A367000D8B21F /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2CB907A42F5A367000D8B21F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
+		2CB907A72F5A367000D8B21F /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2CB907A42F5A367000D8B21F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2C8808CC2F58E22800EBE1D6 /* Project object */;
 }

@@ -9,17 +9,15 @@ struct LeaderboardView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     ForEach(
-                        Array(
-                            viewModel.leaderboardEntries
-                                .sorted(by: { $0.score > $1.score })
-                                .enumerated()
-                        ),
+                        Array(viewModel.leaderboardEntries.enumerated()),
                         id: \.element.id
                     ) { index, entry in
-                        HStack {
+                        HStack(spacing: 12) {
                             Text("#\(index + 1)")
                                 .font(.title2.bold())
                                 .frame(width: 44)
+
+                            TeamAvatarView(avatar: entry.avatar, size: 40)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(entry.teamName)
@@ -36,7 +34,7 @@ struct LeaderboardView: View {
                         }
                         .padding(16)
                         .glassEffect(
-                            entry.teamName == viewModel.team?.name
+                            entry.isCurrentTeam
                                 ? .regular.tint(.blue)
                                 : .regular,
                             in: .rect(cornerRadius: 14)

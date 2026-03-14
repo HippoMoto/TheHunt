@@ -7,7 +7,7 @@ import UIKit
 class GameViewModel {
     // MARK: - State
 
-    var gamePhase: GamePhase = .welcome
+    var gamePhase: GamePhase = .authenticating
     var team: Team?
     var huntData: HuntData?
     var currentLocationIndex: Int = 0
@@ -19,12 +19,31 @@ class GameViewModel {
     var distanceToTarget: Double?
     var errorMessage: String?
 
+    // Evidence challenge state
+    var showEvidenceChallenge = false
+    var isSubmittingEvidence = false
+    var pendingEvidenceLocation: HuntLocation?
+
+    // Event banner state
+    var currentBanner: GameEvent?
+    var bannerQueue: [GameEvent] = []
+
     // MARK: - Services
 
     let locationManager = LocationManager()
 
     @ObservationIgnored
     private let dataService = HuntDataService()
+
+    @ObservationIgnored
+    private lazy var firebaseService = FirebaseService()
+
+    @ObservationIgnored
+    private var authViewModel: AuthViewModel?
+
+    // MARK: - Constants
+
+    private var huntID: String { huntData?.hunt.id ?? "cambridge_hunt_001" }
 
     // MARK: - Tasks
 
@@ -36,6 +55,15 @@ class GameViewModel {
 
     @ObservationIgnored
     private var distanceUpdateTask: Task<Void, Never>?
+
+    @ObservationIgnored
+    private var eventListenerTask: Task<Void, Never>?
+
+    @ObservationIgnored
+    private var leaderboardListenerTask: Task<Void, Never>?
+
+    @ObservationIgnored
+    private var bannerDismissTask: Task<Void, Never>?
 
     // MARK: - Computed Properties
 
@@ -59,6 +87,58 @@ class GameViewModel {
         return Date().timeIntervalSince(start)
     }
 
+    // MARK: - Auth
+
+    func onAuthReady(authViewModel: AuthViewModel) {
+        self.authViewModel = authViewModel
+
+        guard let profile = authViewModel.userProfile else {
+            gamePhase = .welcome
+            return
+        }
+
+        // Check if user has an existing team
+        if let teamID = profile.teamId {
+            Task {
+                await restoreTeamState(teamID: teamID, huntID: huntID)
+            }
+        } else {
+            gamePhase = .welcome
+        }
+    }
+
+    private func restoreTeamState(teamID: String, huntID: String) async {
+        do {
+            guard let teamData = try await firebaseService.fetchTeamData(
+                huntID: huntID, teamID: teamID
+            ) else {
+                gamePhase = .welcome
+                return
+            }
+
+            let name = teamData["name"] as? String ?? "Unknown"
+            let avatarDict = teamData["avatar"] as? [String: String] ?? [:]
+            let avatar = TeamAvatar.fromDict(avatarDict)
+            let locationIndex = teamData["currentLocationIndex"] as? Int ?? 0
+
+            let restoredTeam = Team(name: name, players: [], avatar: avatar)
+            restoredTeam.currentLocationIndex = locationIndex
+            team = restoredTeam
+
+            loadHuntData()
+            currentLocationIndex = locationIndex
+
+            if let huntData, locationIndex >= huntData.locations.count {
+                gamePhase = .completed
+            } else {
+                gamePhase = .lobby
+            }
+        } catch {
+            errorMessage = "Failed to restore team: \(error.localizedDescription)"
+            gamePhase = .welcome
+        }
+    }
+
     // MARK: - Actions
 
     func loadHuntData() {
@@ -69,13 +149,48 @@ class GameViewModel {
         }
     }
 
-    func createTeam(name: String, playerNames: [String]) {
-        let players = playerNames
-            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-            .map { Player(name: $0) }
-        team = Team(name: name, players: players)
-        loadHuntData()
-        gamePhase = .lobby
+    func createTeam(name: String, playerNames: [String], avatar: TeamAvatar = .none) {
+        Task {
+            // Claim team name atomically
+            if let authViewModel {
+                let claimed = await authViewModel.claimTeamName(
+                    name, teamID: UUID().uuidString
+                )
+                guard claimed else {
+                    errorMessage = "That team name is already taken. Please choose another."
+                    return
+                }
+            }
+
+            let players = playerNames
+                .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                .map { Player(name: $0) }
+            let newTeam = Team(name: name, players: players, avatar: avatar)
+            team = newTeam
+            loadHuntData()
+            gamePhase = .lobby
+
+            // Register team with Firebase
+            let teamData: [String: Any] = [
+                "name": newTeam.name,
+                "avatar": newTeam.avatar.toDict(),
+                "currentLocationIndex": 0,
+                "totalScore": 0,
+                "locationsCompleted": 0,
+                "joinedAt": Date().timeIntervalSince1970
+            ]
+            do {
+                try await firebaseService.registerTeam(
+                    huntID: huntID,
+                    teamID: newTeam.id.uuidString,
+                    teamData: teamData
+                )
+                // Record user's team membership
+                authViewModel?.updateUserTeamId(newTeam.id.uuidString)
+            } catch {
+                errorMessage = "Failed to register team: \(error.localizedDescription)"
+            }
+        }
     }
 
     func startHunt() {
@@ -83,20 +198,57 @@ class GameViewModel {
         locationManager.requestAuthorization()
         locationManager.startUpdates()
         startNewLocation()
+        startEventListener()
+        startLeaderboardListener()
     }
 
     func advanceToNextLocation() {
         showArrivalCelebration = false
         currentLocationIndex += 1
+        team?.currentLocationIndex = currentLocationIndex
 
         if isHuntFinished {
             locationManager.stopUpdates()
             cancelAllTasks()
-            generateLeaderboard()
             gamePhase = .completed
+
+            // Broadcast hunt completed event
+            broadcastEvent(type: .huntCompleted, locationName: nil)
         } else {
             startNewLocation()
         }
+    }
+
+    // MARK: - Evidence Challenge
+
+    func submitEvidence(answer: String) {
+        guard let location = pendingEvidenceLocation, let team else { return }
+        isSubmittingEvidence = true
+
+        Task {
+            do {
+                try await firebaseService.submitEvidence(
+                    huntID: huntID,
+                    teamID: team.id.uuidString,
+                    locationID: location.id,
+                    answer: answer
+                )
+                broadcastEvent(type: .evidenceSubmitted, locationName: location.name)
+            } catch {
+                errorMessage = "Failed to submit evidence: \(error.localizedDescription)"
+            }
+
+            isSubmittingEvidence = false
+            showEvidenceChallenge = false
+            pendingEvidenceLocation = nil
+            showArrivalCelebration = true
+        }
+    }
+
+    func skipEvidence() {
+        showEvidenceChallenge = false
+        pendingEvidenceLocation = nil
+        showArrivalCelebration = true
     }
 
     // MARK: - Private Methods
@@ -119,12 +271,14 @@ class GameViewModel {
             try? await Task.sleep(for: .seconds(hunt.mediumRevealMinutes * 60))
             guard !Task.isCancelled else { return }
             revealedTiers.insert(.medium)
+            broadcastEvent(type: .clueUnlockedMedium, locationName: currentTargetLocation?.name)
 
             // Wait for easy reveal
             let additionalWait = (hunt.easyRevealMinutes - hunt.mediumRevealMinutes) * 60
             try? await Task.sleep(for: .seconds(additionalWait))
             guard !Task.isCancelled else { return }
             revealedTiers.insert(.easy)
+            broadcastEvent(type: .clueUnlockedEasy, locationName: currentTargetLocation?.name)
         }
     }
 
@@ -187,45 +341,143 @@ class GameViewModel {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
 
-        showArrivalCelebration = true
+        // Update Firebase with progress
+        Task {
+            guard let team else { return }
+            let updates: [String: Any] = [
+                "currentLocationIndex": team.currentLocationIndex,
+                "totalScore": team.totalScore,
+                "locationsCompleted": team.completedLocations.count
+            ]
+            do {
+                try await firebaseService.updateTeamProgress(
+                    huntID: huntID,
+                    teamID: team.id.uuidString,
+                    updates: updates
+                )
+                try await firebaseService.recordCompletedLocation(
+                    huntID: huntID,
+                    teamID: team.id.uuidString,
+                    completed: completed
+                )
+            } catch {
+                errorMessage = "Failed to update progress: \(error.localizedDescription)"
+            }
+        }
+
+        // Broadcast arrival event
+        broadcastEvent(type: .arrivedAtLocation, locationName: location.name)
+
+        // Show evidence challenge instead of celebration directly
+        pendingEvidenceLocation = location
+        showEvidenceChallenge = true
     }
+
+    // MARK: - Event Broadcasting
+
+    private func broadcastEvent(type: GameEventType, locationName: String?) {
+        guard let team else { return }
+        let event = GameEvent(
+            id: UUID().uuidString,
+            teamID: team.id.uuidString,
+            teamName: team.name,
+            avatar: team.avatar,
+            eventType: type,
+            locationName: locationName,
+            timestamp: Date()
+        )
+        Task {
+            do {
+                try await firebaseService.broadcastEvent(huntID: huntID, event: event)
+            } catch {
+                // Non-critical failure, don't show error to user
+            }
+        }
+    }
+
+    // MARK: - Real-Time Listeners
+
+    private func startEventListener() {
+        guard let team else { return }
+        eventListenerTask?.cancel()
+
+        eventListenerTask = Task {
+            let stream = await firebaseService.observeEvents(
+                huntID: huntID,
+                excludingTeamID: team.id.uuidString
+            )
+            for await event in stream {
+                guard !Task.isCancelled else { break }
+                bannerQueue.append(event)
+                showNextBannerIfNeeded()
+            }
+        }
+    }
+
+    private func showNextBannerIfNeeded() {
+        guard currentBanner == nil, !bannerQueue.isEmpty else { return }
+        currentBanner = bannerQueue.removeFirst()
+
+        bannerDismissTask?.cancel()
+        bannerDismissTask = Task {
+            try? await Task.sleep(for: .seconds(3.5))
+            guard !Task.isCancelled else { return }
+            currentBanner = nil
+            // Show next banner if any queued
+            if !bannerQueue.isEmpty {
+                try? await Task.sleep(for: .seconds(0.3))
+                guard !Task.isCancelled else { return }
+                showNextBannerIfNeeded()
+            }
+        }
+    }
+
+    func dismissBanner() {
+        bannerDismissTask?.cancel()
+        currentBanner = nil
+        if !bannerQueue.isEmpty {
+            Task {
+                try? await Task.sleep(for: .seconds(0.3))
+                showNextBannerIfNeeded()
+            }
+        }
+    }
+
+    private func startLeaderboardListener() {
+        guard let team else { return }
+        leaderboardListenerTask?.cancel()
+
+        leaderboardListenerTask = Task {
+            let stream = await firebaseService.observeLeaderboard(
+                huntID: huntID,
+                currentTeamID: team.id.uuidString
+            )
+            for await entries in stream {
+                guard !Task.isCancelled else { break }
+                leaderboardEntries = entries
+            }
+        }
+    }
+
+    // MARK: - Cleanup
 
     private func cancelAllTasks() {
         timerTask?.cancel()
         arrivalMonitorTask?.cancel()
         distanceUpdateTask?.cancel()
-    }
+        eventListenerTask?.cancel()
+        leaderboardListenerTask?.cancel()
+        bannerDismissTask?.cancel()
 
-    func generateLeaderboard() {
-        guard let team else { return }
-
-        // Real team entry
-        var entries: [LeaderboardEntry] = [
-            LeaderboardEntry(
-                teamName: team.name,
-                score: team.totalScore,
-                locationsCompleted: team.completedLocations.count
-            )
-        ]
-
-        // Mock competitor entries for demonstration
-        let mockTeams = [
-            ("The Scholars", 0.85),
-            ("Cam Runners", 0.70),
-            ("Punting Pros", 0.55),
-            ("Bridge Crew", 0.40),
-        ]
-        let locationCount = huntData?.locations.count ?? 5
-        let maxPossible = (huntData?.hunt.maxPointsPerLocation ?? 100) * locationCount
-
-        for (name, factor) in mockTeams {
-            let mockScore = Int(Double(maxPossible) * factor * Double.random(in: 0.8...1.0))
-            let mockLocations = min(locationCount, Int(Double(locationCount) * factor) + 1)
-            entries.append(
-                LeaderboardEntry(teamName: name, score: mockScore, locationsCompleted: mockLocations)
-            )
+        Task {
+            await firebaseService.removeAllListeners()
         }
-
-        leaderboardEntries = entries
     }
+
+    #if DEBUG
+    func debugSimulateArrival() {
+        guard let currentTarget = currentTargetLocation else { return }
+        handleArrival(at: currentTarget)
+    }
+    #endif
 }
