@@ -46,7 +46,7 @@ struct RootView: View {
             .onChange(of: authViewModel.authState) { _, newState in
                 if newState == .ready {
                     teamManager.restoreTeamIfNeeded(teamId: authViewModel.userProfile?.teamId)
-                    gameViewModel.onAuthReady(authViewModel: authViewModel)
+                    gameViewModel.onAuthReady(authViewModel: authViewModel, teamManager: teamManager)
                 }
             }
     }

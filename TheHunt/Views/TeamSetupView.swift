@@ -79,73 +79,79 @@ struct TeamSetupView: View {
 private struct CreateTeamFormView: View {
     @Environment(TeamManager.self) private var teamManager
     @State private var teamName = ""
+    @State private var selectedAvatar: TeamAvatar = .emoji("🔥")
     var onBack: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            HStack {
-                Button {
-                    onBack()
-                } label: {
-                    Label("Back", systemImage: "chevron.left")
+        ScrollView {
+            VStack(spacing: 24) {
+                HStack {
+                    Button {
+                        onBack()
+                    } label: {
+                        Label("Back", systemImage: "chevron.left")
+                    }
+                    .buttonStyle(.glass)
+                    Spacer()
                 }
-                .buttonStyle(.glass)
-                Spacer()
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-
-            Spacer()
-
-            Text("Create a Team")
-                .font(.largeTitle.bold())
-
-            Text("Choose a name for your team.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-
-            TextField("Team Name", text: $teamName)
-                .font(.title2)
-                .textFieldStyle(.plain)
-                .padding()
-                .glassEffect(.regular, in: .rect(cornerRadius: 12))
                 .padding(.horizontal, 24)
-                .onChange(of: teamName) { _, _ in
-                    teamManager.errorMessage = nil
-                }
+                .padding(.top, 16)
 
-            if let error = teamManager.errorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                Text("Create a Team")
+                    .font(.largeTitle.bold())
+
+                Text("Choose a name and avatar for your team.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                TextField("Team Name", text: $teamName)
+                    .font(.title2)
+                    .textFieldStyle(.plain)
+                    .padding()
+                    .glassEffect(.regular, in: .rect(cornerRadius: 12))
                     .padding(.horizontal, 24)
-            }
+                    .onChange(of: teamName) { _, _ in
+                        teamManager.errorMessage = nil
+                    }
 
-            if teamManager.isLoading {
-                ProgressView()
-            }
+                TeamAvatarPickerView(selectedAvatar: $selectedAvatar)
+                    .padding(.horizontal, 24)
 
-            Spacer()
-
-            Button {
-                Task {
-                    await teamManager.createTeam(
-                        name: teamName.trimmingCharacters(in: .whitespaces)
-                    )
+                if let error = teamManager.errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 24)
                 }
-            } label: {
-                Text("Create Team")
-                    .font(.title2.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
+
+                if teamManager.isLoading {
+                    ProgressView()
+                }
+
+                Spacer(minLength: 40)
+
+                Button {
+                    Task {
+                        await teamManager.createTeam(
+                            name: teamName.trimmingCharacters(in: .whitespaces),
+                            avatar: selectedAvatar
+                        )
+                    }
+                } label: {
+                    Text("Create Team")
+                        .font(.title2.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                }
+                .buttonStyle(.glassProminent)
+                .disabled(teamName.trimmingCharacters(in: .whitespaces).isEmpty || teamManager.isLoading)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 40)
             }
-            .buttonStyle(.glassProminent)
-            .disabled(teamName.trimmingCharacters(in: .whitespaces).isEmpty || teamManager.isLoading)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 40)
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 }
 
@@ -244,3 +250,8 @@ private struct JoinTeamFormView: View {
         }
     }
 }
+#Preview {
+    TeamSetupView()
+        .environment(TeamManager())
+}
+

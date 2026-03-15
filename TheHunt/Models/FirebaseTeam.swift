@@ -1,6 +1,13 @@
 import Foundation
 
+enum ManagementMode: String, Equatable, Sendable {
+    case managerOnly = "manager_only"
+    case allMembers = "all_members"
+}
+
 struct FirebaseTeam: Equatable, Sendable, Identifiable {
+    static let maxMembers = 6
+
     let id: String
     var name: String
     var joinCode: String
@@ -8,16 +15,28 @@ struct FirebaseTeam: Equatable, Sendable, Identifiable {
     var members: [String]
     var status: String
     var createdAt: Date
+    var avatar: TeamAvatar
+    var managementMode: ManagementMode
+    var lockedAt: Date?
+
+    var isLocked: Bool { status == "locked" }
+    var isFull: Bool { members.count >= FirebaseTeam.maxMembers }
 
     func toDict() -> [String: Any] {
-        [
+        var dict: [String: Any] = [
             "name": name,
             "joinCode": joinCode,
             "creatorUid": creatorUid,
             "members": members,
             "status": status,
-            "createdAt": createdAt.timeIntervalSince1970
+            "createdAt": createdAt.timeIntervalSince1970,
+            "avatar": avatar.toDict(),
+            "managementMode": managementMode.rawValue
         ]
+        if let lockedAt {
+            dict["lockedAt"] = lockedAt.timeIntervalSince1970
+        }
+        return dict
     }
 
     static func fromDict(id: String, _ dict: [String: Any]) -> FirebaseTeam? {
@@ -45,6 +64,28 @@ struct FirebaseTeam: Equatable, Sendable, Identifiable {
             createdAt = Date()
         }
 
+        let avatar: TeamAvatar
+        if let avatarDict = dict["avatar"] as? [String: String] {
+            avatar = TeamAvatar.fromDict(avatarDict)
+        } else {
+            avatar = .none
+        }
+
+        let managementMode: ManagementMode
+        if let modeRaw = dict["managementMode"] as? String,
+           let mode = ManagementMode(rawValue: modeRaw) {
+            managementMode = mode
+        } else {
+            managementMode = .managerOnly
+        }
+
+        let lockedAt: Date?
+        if let lockedTimestamp = dict["lockedAt"] as? TimeInterval {
+            lockedAt = Date(timeIntervalSince1970: lockedTimestamp)
+        } else {
+            lockedAt = nil
+        }
+
         return FirebaseTeam(
             id: id,
             name: name,
@@ -52,7 +93,10 @@ struct FirebaseTeam: Equatable, Sendable, Identifiable {
             creatorUid: creatorUid,
             members: members,
             status: status,
-            createdAt: createdAt
+            createdAt: createdAt,
+            avatar: avatar,
+            managementMode: managementMode,
+            lockedAt: lockedAt
         )
     }
 }

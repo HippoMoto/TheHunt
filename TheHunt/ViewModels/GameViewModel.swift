@@ -41,6 +41,9 @@ class GameViewModel {
     @ObservationIgnored
     private var authViewModel: AuthViewModel?
 
+    @ObservationIgnored
+    private var teamManager: TeamManager?
+
     // MARK: - Constants
 
     private var huntID: String { huntData?.hunt.id ?? "cambridge_hunt_001" }
@@ -89,8 +92,9 @@ class GameViewModel {
 
     // MARK: - Auth
 
-    func onAuthReady(authViewModel: AuthViewModel) {
+    func onAuthReady(authViewModel: AuthViewModel, teamManager: TeamManager? = nil) {
         self.authViewModel = authViewModel
+        self.teamManager = teamManager
 
         guard let profile = authViewModel.userProfile else {
             gamePhase = .welcome
@@ -149,6 +153,9 @@ class GameViewModel {
         }
     }
 
+    // TODO: Reconcile with TeamManager.createTeam() — this is a separate code path
+    // that registers with FirebaseService (hunt teams) rather than the teams collection.
+    // The TeamManager path is the primary one for team management features.
     func createTeam(name: String, playerNames: [String], avatar: TeamAvatar = .none) {
         Task {
             // Claim team name atomically
@@ -194,6 +201,11 @@ class GameViewModel {
     }
 
     func startHunt() {
+        // Lock team roster before starting
+        if let teamManager {
+            Task { await teamManager.lockTeamForHunt() }
+        }
+
         gamePhase = .active
         locationManager.requestAuthorization()
         locationManager.startUpdates()

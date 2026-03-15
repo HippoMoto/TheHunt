@@ -1,5 +1,10 @@
 import SwiftUI
 
+// MARK: - Deprecated
+// This view is no longer reachable from ContentView. Team creation and joining
+// now goes through TeamSetupView / TeamLobbyView via TeamManager.
+// Kept for reference — safe to delete.
+
 struct WelcomeView: View {
     @Environment(GameViewModel.self) private var viewModel
     @Environment(AuthViewModel.self) private var authViewModel

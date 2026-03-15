@@ -34,9 +34,21 @@ class TeamManager {
         Auth.auth().currentUser?.uid
     }
 
+    // MARK: - Permission Helper
+
+    /// Returns true if the current user can perform manager-level actions.
+    /// When managementMode is .allMembers, all members get manager powers
+    /// except for delete-team and toggle-management-mode.
+    func currentUserCanManage(restrictedAction: Bool = false) -> Bool {
+        guard let uid = currentUID, let team = currentTeam else { return false }
+        if uid == team.creatorUid { return true }
+        if restrictedAction { return false }
+        return team.managementMode == .allMembers
+    }
+
     // MARK: - Create Team
 
-    func createTeam(name: String) async {
+    func createTeam(name: String, avatar: TeamAvatar = .none) async {
         guard let uid = currentUID else {
             errorMessage = "Not signed in."
             return
@@ -56,7 +68,10 @@ class TeamManager {
                 creatorUid: uid,
                 members: [uid],
                 status: "waiting",
-                createdAt: Date()
+                createdAt: Date(),
+                avatar: avatar,
+                managementMode: .managerOnly,
+                lockedAt: nil
             )
 
             // Write team document
@@ -73,6 +88,192 @@ class TeamManager {
             listenToTeam(teamId: teamId)
         } catch {
             errorMessage = "Failed to create team: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Rename Team
+
+    func renameTeam(_ newName: String) async {
+        guard currentUserCanManage() else {
+            errorMessage = "Only the team manager can rename the team."
+            return
+        }
+        guard let team = currentTeam else { return }
+        guard !team.isLocked else {
+            errorMessage = "Can't rename a team during an active hunt."
+            return
+        }
+
+        let trimmed = newName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            errorMessage = "Team name can't be empty."
+            return
+        }
+        guard trimmed.count <= 30 else {
+            errorMessage = "Team name must be 30 characters or fewer."
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await dbRef.child("teams").child(team.id).child("name").setValue(trimmed)
+            currentTeam?.name = trimmed
+            errorMessage = nil
+        } catch {
+            errorMessage = "Failed to rename team: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Update Avatar
+
+    func updateAvatar(_ avatar: TeamAvatar) async {
+        guard currentUserCanManage() else {
+            errorMessage = "Only the team manager can change the avatar."
+            return
+        }
+        guard let team = currentTeam else { return }
+        guard !team.isLocked else {
+            errorMessage = "Can't change avatar during an active hunt."
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await dbRef.child("teams").child(team.id).child("avatar").setValue(avatar.toDict())
+            currentTeam?.avatar = avatar
+            errorMessage = nil
+        } catch {
+            errorMessage = "Failed to update avatar: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Kick Member
+
+    func kickMember(uid targetUID: String) async {
+        guard currentUserCanManage() else {
+            errorMessage = "You don't have permission to kick members."
+            return
+        }
+        guard let team = currentTeam else { return }
+        guard !team.isLocked else {
+            errorMessage = "Can't kick members during an active hunt."
+            return
+        }
+        guard targetUID != currentUID else {
+            errorMessage = "You can't kick yourself. Use leave instead."
+            return
+        }
+        guard targetUID != team.creatorUid else {
+            errorMessage = "You can't kick the team creator."
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            var updatedMembers = team.members.filter { $0 != targetUID }
+            if updatedMembers.isEmpty { updatedMembers = team.members } // safety
+
+            try await dbRef.child("teams").child(team.id).child("members").setValue(updatedMembers)
+            try await dbRef.child("users").child(targetUID).child("teamId").removeValue()
+
+            currentTeam?.members = updatedMembers
+            memberProfiles.removeAll { $0.uid == targetUID }
+            errorMessage = nil
+        } catch {
+            errorMessage = "Failed to kick member: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Delete Team
+
+    func deleteTeam() async {
+        guard currentUserCanManage(restrictedAction: true) else {
+            errorMessage = "Only the team creator can delete the team."
+            return
+        }
+        guard let team = currentTeam else { return }
+        guard !team.isLocked else {
+            errorMessage = "Can't delete a team during an active hunt."
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            // Clear teamId for all members
+            for memberUID in team.members {
+                try await dbRef.child("users").child(memberUID).child("teamId").removeValue()
+            }
+
+            // Remove join code index
+            try await dbRef.child("joinCodes").child(team.joinCode).removeValue()
+
+            // Remove team document
+            try await dbRef.child("teams").child(team.id).removeValue()
+
+            removeAllListeners()
+            currentTeam = nil
+            memberProfiles = []
+            errorMessage = nil
+        } catch {
+            errorMessage = "Failed to delete team: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Lock Team for Hunt
+
+    func lockTeamForHunt() async {
+        guard let team = currentTeam else { return }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let now = Date()
+            let updates: [String: Any] = [
+                "status": "locked",
+                "lockedAt": now.timeIntervalSince1970
+            ]
+            try await dbRef.child("teams").child(team.id).updateChildValues(updates)
+
+            currentTeam?.status = "locked"
+            currentTeam?.lockedAt = now
+        } catch {
+            errorMessage = "Failed to lock team: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Toggle Management Mode
+
+    func toggleManagementMode() async {
+        guard currentUserCanManage(restrictedAction: true) else {
+            errorMessage = "Only the team creator can change the management mode."
+            return
+        }
+        guard let team = currentTeam else { return }
+        guard !team.isLocked else {
+            errorMessage = "Can't change management mode during an active hunt."
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        let newMode: ManagementMode = team.managementMode == .managerOnly ? .allMembers : .managerOnly
+
+        do {
+            try await dbRef.child("teams").child(team.id).child("managementMode").setValue(newMode.rawValue)
+            currentTeam?.managementMode = newMode
+            errorMessage = nil
+        } catch {
+            errorMessage = "Failed to update management mode: \(error.localizedDescription)"
         }
     }
 
@@ -119,6 +320,16 @@ class TeamManager {
                 return
             }
 
+            guard !team.isLocked else {
+                errorMessage = "This team's roster is locked for an active hunt."
+                return
+            }
+
+            guard !team.isFull else {
+                errorMessage = "This team is full (max \(FirebaseTeam.maxMembers) members)."
+                return
+            }
+
             guard team.status == "waiting" else {
                 errorMessage = "This team is no longer accepting members."
                 return
@@ -148,6 +359,11 @@ class TeamManager {
 
     func leaveTeam() async {
         guard let uid = currentUID, let team = currentTeam else { return }
+
+        guard !team.isLocked else {
+            errorMessage = "You can't leave a team during an active hunt."
+            return
+        }
 
         isLoading = true
         defer { isLoading = false }
@@ -193,10 +409,21 @@ class TeamManager {
         let handle = ref.observe(.value) { [weak self] snapshot in
             Task { @MainActor in
                 guard let self else { return }
+
                 guard
                     let dict = snapshot.value as? [String: Any],
                     let team = FirebaseTeam.fromDict(id: teamId, dict)
                 else {
+                    // Team was deleted
+                    self.removeAllListeners()
+                    self.currentTeam = nil
+                    self.memberProfiles = []
+                    return
+                }
+
+                // Check if current user was kicked (no longer in members)
+                if let uid = self.currentUID, !team.members.contains(uid) {
+                    self.removeAllListeners()
                     self.currentTeam = nil
                     self.memberProfiles = []
                     return
